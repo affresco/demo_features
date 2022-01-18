@@ -11,7 +11,18 @@ from sklearn.base import TransformerMixin
 # ABSTRACT FEATURE CLASS
 # ##################################################################
 
-class BaseFeature(TransformerMixin, ABC):
+class AbstractFeature(TransformerMixin, ABC):
+
+    def __init__(self, prefix: str):
+        self.__prefix: str = str(prefix)
+
+    # ##################################################################
+    # PROPERTIES
+    # ##################################################################
+
+    @property
+    def prefix(self):
+        return self.__prefix
 
     # ##################################################################
     # SKLEARN TRANSFORMER MIXIN IMPLEMENTATION

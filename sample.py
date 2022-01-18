@@ -6,7 +6,6 @@ import pandas as pd
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
 
 # Estimators
 from sklearn.ensemble import RandomForestClassifier
@@ -15,7 +14,10 @@ from sklearn.ensemble import RandomForestClassifier
 from utilities.csv import load_dataset
 
 # Averages
-from averages import SmaFeature, EwmaFeature
+from transformers.averages import SmaFeature, EwmaFeature
+
+# Returns
+from transformers.returns import LinearReturnFeature
 
 RND_STATE = 42
 
@@ -38,13 +40,25 @@ if __name__ == '__main__':
     X_train, X_test, y_train, y_test = train_test_split(dataset, labels, test_size=0.10, random_state=RND_STATE)
 
     # Instantiate some transformations
+    #
+    # Averages
     ewma_on_close_price_only = EwmaFeature(columns=["close", ], spans=[5, 10, 30])
     sma_on_volume_related_columns = SmaFeature(columns=["quantity", "amount", "counter"], spans=[60, 360, 720])
 
+    # Returns
+    linear_return_ohlc = LinearReturnFeature(columns=["open", "high", "low", "close"], prefix="linear")
+
     # Create pipeline for our transformations
     avg_pipeline = Pipeline(steps=[
+        #
+        # First some features...
+        #
         ("ewma_close", ewma_on_close_price_only),
         ("sma_volume", sma_on_volume_related_columns),
+        ("linear_returns", linear_return_ohlc),
+        #
+        # ... then some model
+        #
         ("classifier", RandomForestClassifier(min_samples_leaf=10)),
     ])
 
