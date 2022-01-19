@@ -19,8 +19,13 @@ class AverageMixin(ABC):
         payload = "{ 'data': " + f"{payload}" + "}"
         return json.loads(str(payload).replace("'", '"')).get("data", [])
 
+    # ##################################################################
+    # HELPER METHODS: LEGACY
+    # >>>>>> ALL DEPRECATED ON 2022-01-19
+    # ##################################################################
+
     @classmethod
-    def _sanitize_avg_spans(cls, spans):
+    def __legacy_sanitize_avg_spans(cls, spans):
         if isinstance(spans, int) or isinstance(spans, float):
             spans = [spans, ]
 
@@ -43,11 +48,11 @@ class AverageMixin(ABC):
         return sorted(set(output))
 
     @classmethod
-    def _sanitize_avg_columns(cls, columns=None):
+    def ___legacy_sanitize_avg_columns(cls, columns=None):
 
         # No target columns means applied to all columns
         if columns is None:
-            logging.warning(f"SMA Transformation will be applied to all columns (no target specified).")
+            logging.warning(f"Transformation will be applied to all columns (no target specified).")
             return None
 
         if isinstance(columns, str):
@@ -65,7 +70,7 @@ class AverageMixin(ABC):
         return set(output)
 
     @classmethod
-    def _assert_before_applying(cls, df: pd.DataFrame, columns: list, spans: list):
+    def __legacy_assert_before_applying(cls, df: pd.DataFrame, columns: list, spans: list):
 
         # Must provide some columns
         columns = columns or df.columns

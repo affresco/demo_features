@@ -1,9 +1,10 @@
+import os
+import pathlib
 import joblib
 import datetime as dt
 import numpy as np
 import pandas as pd
 
-from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 
@@ -19,7 +20,12 @@ from transformers.averages import SmaFeature, EwmaFeature
 # Returns
 from transformers.returns import LinearReturnFeature
 
-RND_STATE = 42
+# Bollinger bands
+from transformers.bollinger.bollinger import BollingBandsFeature
+
+# ##################################################################
+# DEMO
+# ##################################################################
 
 if __name__ == '__main__':
     #
@@ -27,17 +33,22 @@ if __name__ == '__main__':
     dataset = load_dataset()
 
     # Create some fake labels: guessing if we'll be up or down in 5 minutes
-    labels = np.sign(dataset["close"] / dataset["close"].shift(5) - 1.0)
-    labels.fillna(0.0, inplace=True)
+    dataset["labels"] = np.sign(dataset["close"] / dataset["close"].shift(5) - 1.0)
+    dataset["labels"].fillna(0.0, inplace=True)
 
     # To make sure we're binary
-    labels = np.sign(labels + 0.01)
+    dataset["labels"] = np.sign(dataset["labels"] + 0.01)
 
     # To check that we have only 2 cats
-    res = pd.factorize(labels)
+    res = pd.factorize(dataset["labels"])
+
+    test_ratio = 0.9
+    split_index = int(test_ratio * dataset.shape[0])
+    train_set, test_set = dataset[:split_index], dataset[split_index:]
 
     # Split test train data
-    X_train, X_test, y_train, y_test = train_test_split(dataset, labels, test_size=0.10, random_state=RND_STATE)
+    y_train, y_test = train_set.pop("labels"), test_set.pop("labels")
+    X_train, X_test = train_set, test_set
 
     # Instantiate some transformations
     #
@@ -48,6 +59,9 @@ if __name__ == '__main__':
     # Returns
     linear_return_ohlc = LinearReturnFeature(columns=["open", "high", "low", "close"], prefix="linear")
 
+    # Bollinger bands
+    bollinger_bands = BollingBandsFeature(columns=["close", "open"], spans=[30, 60, 720], std_devs=[2.0, 2.5, 3.0])
+
     # Create pipeline for our transformations
     avg_pipeline = Pipeline(steps=[
         #
@@ -55,7 +69,10 @@ if __name__ == '__main__':
         #
         ("ewma_close", ewma_on_close_price_only),
         ("sma_volume", sma_on_volume_related_columns),
+        #
         ("linear_returns", linear_return_ohlc),
+        #
+        ("bollinger_bands", bollinger_bands),
         #
         # ... then some model
         #
@@ -66,9 +83,11 @@ if __name__ == '__main__':
     rf_classifier = avg_pipeline.fit(X_train, y_train)
     # print(rf_classifier)
 
-    # then dump it into storage
+    # ...then dump it into storage
     d = dt.datetime.utcnow().strftime("%Y%m%d%H%M%S").upper()
-    joblib.dump(rf_classifier, f"./dumps/rf_classifier_v{d}.pkl")
+    path_job = f"../dumps/rf_classifier_v{d}.pkl"
+    os.makedirs(pathlib.Path(path_job).parent, exist_ok=True)
+    joblib.dump(rf_classifier, path_job)
 
     # To load it back
     # rf_classifier = joblib.load(f"./dumps/rf_classifier_v{d}.pkl")

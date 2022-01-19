@@ -16,7 +16,7 @@ from .mixin import AverageMixin
 class SmaFeature(AbstractFeature, AverageMixin):
     #
     # Columns created will be prefixed with this keyword
-    PREFIX_SMA = "sma"
+    PREFIX = "sma"
 
     # ##################################################################
     # INIT
@@ -27,14 +27,14 @@ class SmaFeature(AbstractFeature, AverageMixin):
 
         # Init super feature class
         if prefix is None:
-            prefix = self.PREFIX_SMA
+            prefix = self.PREFIX
         super(SmaFeature, self).__init__(prefix=prefix)
 
         # Target columns on which we operate
-        self.columns = self._sanitize_avg_columns(columns=columns)
+        self.columns = self._sanitize_columns(columns=columns)
 
         # Averages spans
-        self.spans = self._sanitize_avg_spans(spans=spans)
+        self.spans = self._sanitize_spans(spans=spans)
         #
         # Initial span of data to be discarded
         self.warmup = max(self.spans)
@@ -78,7 +78,7 @@ class SmaFeature(AbstractFeature, AverageMixin):
     # ##################################################################
 
     def __call__(self, df: pd.DataFrame):
-        return self.apply(df=df, prefix=self.PREFIX_SMA, columns=self.columns, spans=self.spans,
+        return self.apply(df=df, prefix=self.PREFIX, columns=self.columns, spans=self.spans,
                           ffill=self.ffill, bfill=self.bfill)
 
     @classmethod
@@ -86,7 +86,7 @@ class SmaFeature(AbstractFeature, AverageMixin):
               ffill: bool = True, bfill: bool = True):
 
         # Ensure that parameters are present
-        prefix = prefix or cls.PREFIX_SMA
+        prefix = prefix or cls.PREFIX
 
         # Make some assertions
         cls._assert_before_applying(df=df, columns=columns, spans=spans)
