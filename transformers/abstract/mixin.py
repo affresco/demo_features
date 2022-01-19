@@ -70,9 +70,13 @@ class AbstractFeature(TransformerMixin, ABC):
     # ##################################################################
 
     @classmethod
-    def _sanitize_spans(cls, spans):
+    def _sanitize_spans(cls, spans, default: list = None):
+
         if isinstance(spans, int) or isinstance(spans, float):
             spans = [spans, ]
+
+        elif spans is None and default is not None:
+            spans = default
 
         assert isinstance(spans, list) or isinstance(spans, Spans), "Spans must be passed as a list of integers."
         output = []
@@ -81,7 +85,8 @@ class AbstractFeature(TransformerMixin, ABC):
                 output.append(int(s))  # cast should avoid typing issues
             except Exception as exc:
                 logging.warning(f"Span type casting produced an exception: {exc}")
-                output.append(int(s[0]))  # Scikit issue with clone sanity checks (see keras issue 13586)
+                # Scikit issue with clone sanity checks (see Keras issue 13586)
+                output.append(int(s[0]))
 
         return sorted(list(set(output)))
 

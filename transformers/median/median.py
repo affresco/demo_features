@@ -22,7 +22,7 @@ class MedianFeature(AbstractFeature):
     # ##################################################################
 
     def __init__(self,
-                 columns: dict = None,
+                 columns: list = None,
                  prefix: str = None):
         """
         Feature a computation of the median of provided columns.
