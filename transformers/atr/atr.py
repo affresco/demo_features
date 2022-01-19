@@ -126,24 +126,6 @@ class AverageTrueRangeFeature(AbstractFeature, AverageTrueRangeMixin):
     @classmethod
     def __compute_atr(cls, df: pd.DataFrame, columns: dict, spans: list, prefix: str,
                       ffill: bool = True, bfill: bool = True):
-        """
-        Compute a normalized version of the Bollinger band indicator for machine learning applications.
-
-        The result is a normalized position inside the bands, that is
-
-                           target_column(t) - SMA_target_column(t)
-            boll_norm(t) = ----------------------------------------
-                              2 x target_column_std_deviation(t)
-
-        :param df: pd.DataFrame
-        :param columns: columns on which computation will be performed
-        :param spans: List of spans as integers
-        :param std_devs: Number of standard deviations (half-width of the band)
-        :param prefix: Added to output col for identifications
-        :param ffill: Fill forward after computation
-        :param bfill: Fill backward after computation
-        :return: pd.DataFrame with added columns
-        """
 
         # Extract columns from mapping
         high_col = columns.get("high", "high")
