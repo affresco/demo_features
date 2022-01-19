@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
     # This takes about 60 seconds...
     rf_classifier = avg_pipeline.fit(X_train, y_train)
-    print(rf_classifier)
+    # print(rf_classifier)
 
     # then dump it into storage
     d = dt.datetime.utcnow().strftime("%Y%m%d%H%M%S").upper()
@@ -74,5 +74,5 @@ if __name__ == '__main__':
     # rf_classifier = joblib.load(f"./dumps/rf_classifier_v{d}.pkl")
 
     # Make a prediction
-    train_predictions = rf_classifier.predict(X_train)
-    score = roc_auc_score(y_train, train_predictions)
+    # train_predictions = rf_classifier.predict(X_train)
+    # score = roc_auc_score(y_train, train_predictions)
