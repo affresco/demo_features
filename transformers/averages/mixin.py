@@ -4,6 +4,8 @@ from abc import ABC
 
 import pandas as pd
 
+from utilities.container import Spans
+
 
 class AverageMixin(ABC):
     """
@@ -29,11 +31,16 @@ class AverageMixin(ABC):
             #
             spans = cls.json_loads(spans)
 
-        assert isinstance(spans, list), "Spans must be passed as a list of integers."
+        assert isinstance(spans, list) or isinstance(spans, Spans), "Spans must be passed as a list of integers."
         output = []
         for s in spans:
-            output.append(int(s))  # cast should avoid typing issues
-        return sorted(list(set(output)))
+            try:
+                output.append(int(s))  # cast should avoid typing issues
+            except:
+                output.append(int(s[0]))  # Scikit issue with clone sanity checks
+
+        # return sorted(list(set(output)))
+        return sorted(set(output))
 
     @classmethod
     def _sanitize_avg_columns(cls, columns=None):
@@ -54,7 +61,8 @@ class AverageMixin(ABC):
         output = []
         for t in columns:
             output.append(str(t))  # cast should avoid typing issues
-        return list(set(output))
+        # return list(set(output))
+        return set(output)
 
     @classmethod
     def _assert_before_applying(cls, df: pd.DataFrame, columns: list, spans: list):

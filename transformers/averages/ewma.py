@@ -1,3 +1,4 @@
+import copy
 import logging
 
 # Scientific
@@ -7,7 +8,6 @@ import pandas as pd
 from transformers.abstract.mixin import AbstractFeature
 
 # Local modules relating to averaging
-from .parameters import EWMA_SPANS
 from .mixin import AverageMixin
 
 
@@ -24,8 +24,12 @@ class EwmaFeature(AbstractFeature, AverageMixin):
     # INIT
     # ##################################################################
 
-    def __init__(self, spans: list = EWMA_SPANS, columns: list = None, prefix: str = None,
-                 ffill: bool = True, bfill: bool = True):
+    def __init__(self,
+                 spans: list,
+                 columns: list = None,
+                 prefix: str = None,
+                 ffill: bool = True,
+                 bfill: bool = True):
 
         # Init super feature class
         if prefix is None:

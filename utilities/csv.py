@@ -8,7 +8,7 @@ TIMESTAMP_COLUMN = "unix"
 def load_dataset():
     #
     # Path to demo file
-    path_spot = f"./data/dataset.csv"
+    path_spot = f"../data/dataset.csv"
     df = pd.read_csv(path_spot)
     logging.info(f"Spot dataset loaded.")
 

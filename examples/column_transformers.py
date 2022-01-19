@@ -3,9 +3,16 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 
-from sklearn.metrics import roc_auc_score
+import sklearn
+SK_VERSION = sklearn.__version__
+
+if int(SK_VERSION.split(".")[1]) > 21:
+    print(f"WARNING: Cloning issue reported in Scikit-Learn base file ('is not' test failing).")
+    raise ValueError(f"Scikit-Learn version is not suitable.")
+
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
 
 # Estimators
 from sklearn.ensemble import RandomForestClassifier
@@ -41,29 +48,42 @@ if __name__ == '__main__':
 
     # Instantiate some transformations
     #
-    # Averages
-    ewma_on_close_price_only = EwmaFeature(columns=["close", ], spans=[5, 10, 30])
-    sma_on_volume_related_columns = SmaFeature(columns=["quantity", "amount", "counter"], spans=[60, 360, 720])
+    # Averages (no columns specified)
+    ewma_average = EwmaFeature(spans=[5, 10, 30])
+    # sma_average = SmaFeature(spans=[60, 360, 720])
 
-    # Returns
-    linear_return_ohlc = LinearReturnFeature(columns=["open", "high", "low", "close"], prefix="linear")
+    columns_averages = ["close", "amount"]
 
     # Create pipeline for our transformations
-    avg_pipeline = Pipeline(steps=[
-        #
-        # First some features...
-        #
-        ("ewma_close", ewma_on_close_price_only),
-        ("sma_volume", sma_on_volume_related_columns),
-        ("linear_returns", linear_return_ohlc),
-        #
-        # ... then some model
-        #
-        ("classifier", RandomForestClassifier(min_samples_leaf=10)),
+    pipe_averages = Pipeline(steps=[
+        ("ewma_close", ewma_average),
+        # ("sma_volume", sma_average),
     ])
 
+    # Returns
+    linear_returns = LinearReturnFeature(prefix="linear")
+    columns_returns = ["open", "high", "low", "close"]
+
+    pipe_returns = Pipeline(steps=[
+        ("linear_returns", linear_returns),
+    ])
+
+    pre_processor = ColumnTransformer(
+        transformers=[
+            ('averages', pipe_averages, columns_averages),
+            ('returns', pipe_returns, columns_returns),
+        ]
+    )
+
+    full_pipeline = Pipeline(
+        steps=[
+            ('pre_processor', pre_processor),
+            ('classifier', RandomForestClassifier()),
+        ]
+    )
+
     # This takes about 60 seconds...
-    rf_classifier = avg_pipeline.fit(X_train, y_train)
+    rf_classifier = full_pipeline.fit(X_train, y_train)
     # print(rf_classifier)
 
     # then dump it into storage
