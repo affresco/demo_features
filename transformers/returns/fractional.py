@@ -101,7 +101,8 @@ class FractionalReturnFeature(AbstractFeature, ReturnsMixin):
     # ##################################################################
 
     @classmethod
-    def __compute_frac_return(cls, df: pd.DataFrame, order: float, columns: list, prefix: str, fill: bool = True):
+    def __compute_frac_return(cls, df: pd.DataFrame, order: float, columns: list, prefix: str,
+                              fill: bool = True, normalize: bool = False):
         #
         # Pre-existing columns:
         # we will not overwrite/compute the pre-existing columns
@@ -118,11 +119,14 @@ class FractionalReturnFeature(AbstractFeature, ReturnsMixin):
                 logging.warning(f"Column '{col_out}' is already present, skipping transformation.")
                 continue
 
-            # Make computation
-            res = fdiff(df[col], n=order)
+            # Make computation (return numpy array)
+            res_array = fdiff(df[col], n=order)
+            res = pd.Series(res_array, index=df.index, name=col_out)
+
+            if normalize:
+                res /= df[col]
 
             # Merge back into the df
-            res.name = col_out
             df = df.merge(res, left_index=True, right_index=True)
 
             if fill:

@@ -15,15 +15,18 @@ from sklearn.ensemble import RandomForestClassifier
 from utilities.csv import load_dataset
 
 # Averages
-from transformers.averages import SmaFeature, EwmaFeature
+from transformers.averages import (SmaFeature,
+                                   EwmaFeature)
 
 # Returns
-from transformers.returns import LinearReturnFeature
+from transformers.returns import (LinearReturnFeature,
+                                  LogarithmicReturnFeature,
+                                  FractionalReturnFeature)
 
 # Bollinger bands
 from transformers.bollinger import BollingBandsFeature
 
-# ATR
+# Average True Range (Wilder's ATR)
 from transformers.atr import AverageTrueRangeFeature
 
 
@@ -88,7 +91,9 @@ if __name__ == '__main__':
     sma_on_volume_related_columns = SmaFeature(columns=["quantity", "amount", "counter"], spans=[60, 360, 720])
 
     # Returns
-    linear_return_ohlc = LinearReturnFeature(columns=["open", "high", "low", "close"], prefix="linear")
+    linear_return_close = LinearReturnFeature(columns=["close", ])
+    log_return_close = LogarithmicReturnFeature(columns=["close", ])
+    frac_return_close = FractionalReturnFeature(columns=["close", ], order=0.9)
 
     # Bollinger bands
     bollinger_bands = BollingBandsFeature(columns=["close", "open"], spans=[30, 60, 720], std_devs=[2.0, 2.5, 3.0])
@@ -108,7 +113,9 @@ if __name__ == '__main__':
         ("ewma_close", ewma_on_close_price_only),
         ("sma_volume", sma_on_volume_related_columns),
         #
-        ("linear_returns", linear_return_ohlc),
+        ("linear_returns", linear_return_close),
+        ("logarithmic_returns", log_return_close),
+        ("fractional_returns", frac_return_close),
         #
         ("bollinger_bands", bollinger_bands),
         #
