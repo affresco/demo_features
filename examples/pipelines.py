@@ -26,35 +26,63 @@ from transformers.bollinger import BollingBandsFeature
 # ATR
 from transformers.atr import AverageTrueRangeFeature
 
+
+# ##################################################################
+# GENERATING SOME LABELS
+# ##################################################################
+
+def generate_dummy_labels(df: pd.DataFrame):
+    # Create some fake labels:
+    # guessing if we'll be up or down in 5 minutes
+    df["labels"] = np.sign(df["close"] / df["close"].shift(5) - 1.0)
+    df["labels"].fillna(0.0, inplace=True)
+
+    # To make sure we're binary
+    df["labels"] = np.sign(df["labels"] + 0.01)
+    return df
+
+
+# ##################################################################
+# SPLITTING TIME SERIES DATA
+# ##################################################################
+
+def split_train_test(df: pd.DataFrame, train_ratio=0.9):
+
+    split_idx = int(train_ratio * df.shape[0])
+    trn_set, tst_set = df[:split_idx], df[split_idx:]
+
+    # Split test train data
+    y_trn, y_tst = trn_set.pop("labels"), tst_set.pop("labels")
+    X_trn, X_tst = trn_set, tst_set
+
+    # Same format as sklearn
+    return X_trn, X_tst, y_trn, y_tst
+
+
 # ##################################################################
 # DEMO
 # ##################################################################
 
 if __name__ == '__main__':
-    #
-    # Load rough dataset
+
+    # #################################
+    # LOAD & PREPARE DATA SAMPLE
+    # #################################
+
+    # Load demo dataset
     dataset = load_dataset()
 
-    # Create some fake labels: guessing if we'll be up or down in 5 minutes
-    dataset["labels"] = np.sign(dataset["close"] / dataset["close"].shift(5) - 1.0)
-    dataset["labels"].fillna(0.0, inplace=True)
+    # Create some fake labels: guessing if
+    # the level will be up or down in 5 minutes
+    dataset = generate_dummy_labels(dataset)
 
-    # To make sure we're binary
-    dataset["labels"] = np.sign(dataset["labels"] + 0.01)
+    # Split into 4 dfs
+    X_train, X_test, y_train, y_test = split_train_test(df=dataset, train_ratio=0.9)
 
-    # To check that we have only 2 cats
-    res = pd.factorize(dataset["labels"])
+    # #################################
+    # DEMO OF TRANSFORMATIONS
+    # #################################
 
-    test_ratio = 0.9
-    split_index = int(test_ratio * dataset.shape[0])
-    train_set, test_set = dataset[:split_index], dataset[split_index:]
-
-    # Split test train data
-    y_train, y_test = train_set.pop("labels"), test_set.pop("labels")
-    X_train, X_test = train_set, test_set
-
-    # Instantiate some transformations
-    #
     # Averages
     ewma_on_close_price_only = EwmaFeature(columns=["close", ], spans=[5, 10, 30])
     sma_on_volume_related_columns = SmaFeature(columns=["quantity", "amount", "counter"], spans=[60, 360, 720])
@@ -67,6 +95,10 @@ if __name__ == '__main__':
 
     # Average True Range
     atr_wilder = AverageTrueRangeFeature(spans=[30, 60, 720])
+
+    # #################################
+    # CREATING PIPELINE
+    # #################################
 
     # Create pipeline for our transformations
     avg_pipeline = Pipeline(steps=[
@@ -86,6 +118,10 @@ if __name__ == '__main__':
         #
         ("classifier", RandomForestClassifier(min_samples_leaf=10)),
     ])
+
+    # #################################
+    # USING PIPELINE
+    # #################################
 
     # This takes about 60 seconds...
     rf_classifier = avg_pipeline.fit(X_train, y_train)

@@ -29,7 +29,7 @@ class FractionalReturnFeature(AbstractFeature, ReturnsMixin):
     # INIT
     # ##################################################################
 
-    def __init__(self, order: float = None, columns: list = None, prefix: str = None, fill_na: bool = True):
+    def __init__(self, order: float, columns: list = None, prefix: str = None, fill_na: bool = True):
 
         # Init super feature class
         if prefix is None:
@@ -38,8 +38,7 @@ class FractionalReturnFeature(AbstractFeature, ReturnsMixin):
 
         # Order of fractional differentiation
         self.order = order
-        if self.order is not None:
-            assert 0.0 < self.order <= 1.0, "Order of fractional differentiation must be between 0 and 1."
+        assert 0.0 < self.order < 1.0, "Order of fractional differentiation must be between 0 and 1."
 
         # Target columns on which we operate
         self.columns = self._sanitize_ret_columns(columns=columns)
@@ -57,16 +56,12 @@ class FractionalReturnFeature(AbstractFeature, ReturnsMixin):
     # ##################################################################
 
     def fit(self, *args, **kwargs):
-        if self.order is not None:
-            return self
-        #
-        # TODO: Estimate the fractional diff required to achieve stationarity.
-        raise NotImplemented(f"Estimate the fractional diff required to achieve stationarity.")
+        return self
 
     def transform(self, X, y=None, **fit_params):
         assert isinstance(X, pd.DataFrame), "Transform must be a DataFrame"
         if y is not None:
-            logging.warning(f"Argument 'y' of logarithmic returns transformation will be ignored.")
+            logging.warning(f"Argument 'y' of fractional returns transformation will be ignored.")
         return self(df=X)
 
     def fit_transform(self, X, y=None, **fit_params):
