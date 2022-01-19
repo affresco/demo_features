@@ -5,7 +5,7 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 
-from sklearn.model_selection import train_test_split
+# Pipelines
 from sklearn.pipeline import Pipeline
 
 # Estimators
@@ -21,7 +21,10 @@ from transformers.averages import SmaFeature, EwmaFeature
 from transformers.returns import LinearReturnFeature
 
 # Bollinger bands
-from transformers.bollinger.bollinger import BollingBandsFeature
+from transformers.bollinger import BollingBandsFeature
+
+# ATR
+from transformers.atr import AverageTrueRangeFeature
 
 # ##################################################################
 # DEMO
@@ -62,6 +65,9 @@ if __name__ == '__main__':
     # Bollinger bands
     bollinger_bands = BollingBandsFeature(columns=["close", "open"], spans=[30, 60, 720], std_devs=[2.0, 2.5, 3.0])
 
+    # Average True Range
+    atr_wilder = AverageTrueRangeFeature(spans=[30, 60, 720])
+
     # Create pipeline for our transformations
     avg_pipeline = Pipeline(steps=[
         #
@@ -73,6 +79,8 @@ if __name__ == '__main__':
         ("linear_returns", linear_return_ohlc),
         #
         ("bollinger_bands", bollinger_bands),
+        #
+        ("atr_wilder", atr_wilder),
         #
         # ... then some model
         #
@@ -94,4 +102,3 @@ if __name__ == '__main__':
 
     # Make a prediction
     # train_predictions = rf_classifier.predict(X_train)
-    # score = roc_auc_score(y_train, train_predictions)

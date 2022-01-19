@@ -1,4 +1,5 @@
 import logging
+import random
 
 # Scientific
 import pandas as pd
@@ -7,17 +8,17 @@ import pandas as pd
 from transformers.abstract.mixin import AbstractFeature
 
 # Local modules relating to boll bands
-from .mixin import BollingerBandsMixin
+from .mixin import AverageTrueRangeMixin
 
 
 # ##################################################################
-# BOLLINGER BANDS
+# AVERAGE TRUE RANGE
 # ##################################################################
 
-class BollingBandsFeature(AbstractFeature, BollingerBandsMixin):
+class AverageTrueRangeFeature(AbstractFeature, AverageTrueRangeMixin):
     #
     # Columns created will be prefixed with this keyword
-    PREFIX = "boll"
+    PREFIX = "atr"
 
     # ##################################################################
     # INIT
@@ -25,17 +26,14 @@ class BollingBandsFeature(AbstractFeature, BollingerBandsMixin):
 
     def __init__(self,
                  spans: list,
-                 std_devs: list,
-                 columns: list = None,
+                 columns: dict = None,
                  prefix: str = None,
                  ffill: bool = True,
                  bfill: bool = True):
         """
-        Feature a normalized computation of the Bollinger band suitable for machine learning.
+        Feature a normalized computation of the Average True Range (ATR) of Wilder suitable for machine learning.
 
         :param columns: columns on which computation will be performed
-        :param spans: List of spans as integers
-        :param std_devs: Number of standard deviations (half-width of the band)
         :param prefix: Added to output col for identifications
         :param ffill: Fill forward after computation
         :param bfill: Fill backward after computation
@@ -44,16 +42,13 @@ class BollingBandsFeature(AbstractFeature, BollingerBandsMixin):
         # Init super feature class
         if prefix is None:
             prefix = self.PREFIX
-        super(BollingBandsFeature, self).__init__(prefix=prefix)
+        super(AverageTrueRangeFeature, self).__init__(prefix=prefix)
 
         # Target columns on which we operate
-        self.columns = self._sanitize_columns(columns=columns)
+        self.columns = self._sanitize_atr_columns_mapping(columns=columns)
 
         # Computation spans
         self.spans = self._sanitize_spans(spans=spans)
-
-        # Computation standard deviation
-        self.std_devs = self._sanitize_std_devs(std_devs=std_devs)
 
         # Initial span of data to be discarded
         self.warmup = max(self.spans)
@@ -76,7 +71,7 @@ class BollingBandsFeature(AbstractFeature, BollingerBandsMixin):
     def transform(self, X, y=None, **fit_params):
         assert isinstance(X, pd.DataFrame), "Transform must be a DataFrame"
         if y is not None:
-            logging.warning(f"Argument 'y' of Bollinger bands transformation will be ignored.")
+            logging.warning(f"Argument 'y' of ATR transformation will be ignored.")
         return self(df=X)
 
     def fit_transform(self, X, y=None, **fit_params):
@@ -86,7 +81,6 @@ class BollingBandsFeature(AbstractFeature, BollingerBandsMixin):
         params = {
             "prefix": self.prefix,
             "spans": self.spans,
-            "std_devs": self.std_devs,
             "columns": self.columns,
             "ffill": self.ffill,
             "bfill": self.bfill,
@@ -102,31 +96,36 @@ class BollingBandsFeature(AbstractFeature, BollingerBandsMixin):
                           prefix=self.PREFIX,
                           columns=self.columns,
                           spans=self.spans,
-                          std_devs=self.std_devs,
                           ffill=self.ffill,
                           bfill=self.bfill)
 
     @classmethod
-    def apply(cls, df: pd.DataFrame, prefix: str = None, columns: list = None, spans: list = None,
-              std_devs: list = None, ffill: bool = True, bfill: bool = True):
+    def apply(cls, df: pd.DataFrame, prefix: str = None, columns: dict = None, spans: list = None,
+              ffill: bool = True, bfill: bool = True):
 
         # Ensure that parameters are present
         prefix = prefix or cls.PREFIX
 
         # Make some assertions
-        cls._assert_before_applying(df=df, columns=columns, spans=spans)
+        # cls._assert_before_applying(df=df, columns=columns, spans=spans)
 
-        return cls.__compute_bollinger_bands(df=df,
-                                             columns=columns,
-                                             spans=spans,
-                                             std_devs=std_devs,
-                                             prefix=prefix,
-                                             ffill=ffill,
-                                             bfill=bfill)
+        return cls.__compute_atr(df=df,
+                                 columns=columns,
+                                 spans=spans,
+                                 prefix=prefix,
+                                 ffill=ffill,
+                                 bfill=bfill)
 
     @classmethod
-    def __compute_bollinger_bands(cls, df: pd.DataFrame, columns: list, spans: list, std_devs: list, prefix: str,
-                                  ffill: bool = True, bfill: bool = True):
+    def __compute_true_range(cls, df: pd.DataFrame, high_col: str, low_col: str, close_col: str):
+        df['atr0'] = abs(df[high_col] - df[low_col])
+        df['atr1'] = abs(df[high_col] - df[close_col].shift())
+        df['atr2'] = abs(df[low_col] - df[close_col].shift())
+        return df[['atr0', 'atr1', 'atr2']].max(axis=1)
+
+    @classmethod
+    def __compute_atr(cls, df: pd.DataFrame, columns: dict, spans: list, prefix: str,
+                      ffill: bool = True, bfill: bool = True):
         """
         Compute a normalized version of the Bollinger band indicator for machine learning applications.
 
@@ -145,42 +144,52 @@ class BollingBandsFeature(AbstractFeature, BollingerBandsMixin):
         :param bfill: Fill backward after computation
         :return: pd.DataFrame with added columns
         """
-        #
+
+        # Extract columns from mapping
+        high_col = columns.get("high", "high")
+        assert high_col in df.columns
+
+        low_col = columns.get("low", "low")
+        assert low_col in df.columns
+
+        close_col = columns.get("close", "close")
+        assert close_col in df.columns
+
+        # Our column
+        true_range = f"tr_tmp_{random.randint(11111111111, 99999999999)}"
+
+        # First compute the True Range for perpetual
+        df.loc[:, true_range] = cls.__compute_true_range(df=df[[high_col, low_col, close_col]].copy(),
+                                                         high_col=high_col,
+                                                         low_col=low_col,
+                                                         close_col=close_col)
+        df.loc[:, true_range] /= df[close_col]
+
         # Current columns: we will not overwrite the pre-existing columns
         already_present = df.columns
 
-        # Our target columns
-        for col in columns:
+        # Our target spans
+        for s in spans:
 
-            # Our target spans
-            for s in spans:
+            # Projected column name
+            col_out = cls._prefixed(prefix, s)
 
-                # Our target std deviations
-                for nb_std in std_devs:
+            if col_out in already_present:
+                logging.warning(f"Column '{col_out}' is already present, skipping transformation.")
+                continue
 
-                    # Projected column name
-                    col_out = cls._prefixed(prefix, col, s, nb_std)
+            # Compute transformation
+            df.loc[:, col_out] = df[true_range].ewm(alpha=1 / s, adjust=True).mean()
 
-                    if col_out in already_present:
-                        logging.warning(f"Column '{col_out}' is already present, skipping transformation.")
-                        continue
+            # Forward fill
+            if ffill:
+                df[col_out].ffill(inplace=True)
 
-                    # Compute transformation
-                    prices = df[col]
-                    sma = prices.rolling(s).mean()
-                    one_std = prices.rolling(s).std()
-                    boll_normalized = (df[col] - sma) / (one_std * 2.0 * nb_std)
+            # Backward fill
+            if bfill:
+                df[col_out].bfill(inplace=True)
 
-                    # Add to existing df (this avoids copy warnings)
-                    boll_normalized.name = col_out
-                    df = df.merge(boll_normalized, left_index=True, right_index=True)
-
-                    # Forward fill
-                    if ffill:
-                        df[col_out].ffill(inplace=True)
-
-                    # Backward fill
-                    if bfill:
-                        df[col_out].bfill(inplace=True)
-
+        # Clean up after use...
+        if true_range in df.columns:
+            df.drop(columns=[true_range, ], inplace=True)
         return df

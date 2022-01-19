@@ -46,6 +46,18 @@ class AbstractFeature(TransformerMixin, ABC):
         return self.fit(X, y).transform()
 
     # ##################################################################
+    # LOCAL IMPLEMENTATION
+    # ##################################################################
+
+    @abstractmethod
+    def get_params(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def apply(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    # ##################################################################
     # COLUMN PREFIX METHODS
     # ##################################################################
 
@@ -131,3 +143,6 @@ class AbstractFeature(TransformerMixin, ABC):
             columns = df.columns
 
         return list(set(columns))
+
+    def __call__(self, df: pd.DataFrame):
+        return self.apply(df=df, **self.get_params())
